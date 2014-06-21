@@ -39,7 +39,7 @@ Opcodes
 - IO - 0
     - {ASEND, ARECV}
 - Other - 0
-    - {NOP, HALT, END, SPEC} +(PUSH, POP, ASEND, ARECV)
+    - {NOP, HALT, END, SPEC, DEBUG} +(PUSH, POP, ASEND, ARECV)
 
 Total: 28
 - Operations to add?
