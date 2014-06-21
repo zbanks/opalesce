@@ -13,29 +13,20 @@
 #define NUM_FRAMEBUFFERS 4  // 2 bits
 #define NUM_FRAMEBUFFERS_MASK 0x3
 
-// 9 bits of ref
-// # registers = 16
-// 8 7654 3210
-// 0 0000 xxxx - READONLY Special[`xxxx`]
-// 0 0001 **** - READONLY Unused[`xxxx`]
-// 0 0010 rrrr - Regs[`xxxx`]
-// 0 0011 rrrr - Program[Regs[`rrrr`]]
-// 0 01ff rrrr - Framebuffer[`ff`][Regs[`rrrr`]]
-// 0 1*** **** - Unused
-// 1 xxxx xxxx - Program[`xxxxxx`] (exact)
 
 #define TICK_LENGTH  240
 
 // print NUM_PIXELS * NUM_FRAMEBUFFERS * sizeof(color_t) + NUM_FILTERS * FILTER_SIZE * sizeof(uint32_t) < 8kb
 // 80 * 4 * 4 + 16 * 64 * 4 = 5376 bytes
 
-typedef color_t[NUM_PIXELS] framebuffer_t;
-typedef uint32_t[FILTER_SIZE] filter_t;
+//typedef color_t framebuffer_t[NUM_PIXELS];
+//typedef uint32_t[FILTER_SIZE] filter_t;
 
 // Array of all framebuffers
-extern framebuffer_t framebuffers[];
+//extern framebuffer_t framebuffers[];
 // Array of all filters
-extern filter_t filters[];
+//extern filter_t filters[];
+//
 
 // Fractional Tick, out of TICK_LENGTH. If TICK_LENGTH >= 255, use uint16_t
 typedef uint8_t fractick_t; // sizeof(fractick_t) > TICK_LENGTH
@@ -74,13 +65,43 @@ extern tick_t clock;
 #define OPL_OP_HALT   (0x01 << OPL_OPOFFSET)
 #define OPL_OP_DEBUG   (0x02 << OPL_OPOFFSET)
 
-typedef struct{
-    // TODO
-    unsigned op:5;
-    unsigned cons:9;
-    unsigned src:9;
-    unsigned dest:9;
-} opcode_t;
+// 9 bits of ref
+// # registers = 16
+// 8 7654 3210
+// 0 0000 xxxx - READONLY Special[`xxxx`]
+// 0 0001 **** - READONLY Unused[`xxxx`]
+// 0 0010 rrrr - Regs[`xxxx`]
+// 0 0011 rrrr - Program[Regs[`rrrr`]]
+// 0 01ff rrrr - Framebuffer[`ff`][Regs[`rrrr`]]
+// 0 1*** **** - Unused
+// 1 xxxx xxxx - Program[`xxxxxx`] (exact)
+
+#define OPL_A_SP      (0x00)
+#define OPL_A_REG     (0x10)
+#define OPL_A_PREG    (0x20)
+#define OPL_A_FREG    (0x40)
+#define OPL_A_F0REG   (0x40)
+#define OPL_A_F1REG   (0x50)
+#define OPL_A_F2REG   (0x60)
+#define OPL_A_F3REG   (0x70)
+#define OPL_A_PROG    (0x100)
+
+#define _AREG(r) (OPL_A_REG | r)
+#define _APREG(r) (OPL_A_PREG | r)
+#define _AFREG(f, r) (OPL_A_FREG | r | (f << 4))
+#define _APROG(l) (OPL_A_PROG | l)
+
+#define _D(x) (x << 0)
+#define _S(x) (x << 9)
+#define _L(x) (x << 18)
+#define _O(x) (x << 27)
+
+#define _gD(x) (x & 0x1FF)
+#define _gS(x) ((x >> 9) & 0x1FF)
+#define _gL(x) ((x >> 18) & 0x1FF)
+#define _gO(x) ((x >> 27) & 0x1F)
+
+typedef uint32_t opcode_t;
 
 typedef struct{
     uint32_t r[OPL_NUM_REGS];
@@ -91,5 +112,8 @@ typedef struct{
     uint32_t loopc;
     uint32_t fblen;
 } op_regs_t;
+
+extern color_t framebuffers[NUM_FRAMEBUFFERS][NUM_PIXELS];
+extern opcode_t filters[NUM_FILTERS][FILTER_SIZE];
 
 #endif

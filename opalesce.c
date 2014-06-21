@@ -1,4 +1,8 @@
+#include "stdio.h"
 #include "opalesce.h"
+
+color_t framebuffers[NUM_FRAMEBUFFERS][NUM_PIXELS];
+opcode_t filters[NUM_FILTERS][FILTER_SIZE];
 
 // 9 bits of ref
 // # registers = 16
@@ -19,20 +23,21 @@ void opalesce_exec(opcode_t* program){
     uint8_t write_dest;
 
     regs.pc = 0;
+    regs.time = 0;
     opcode_t* program_start = program;
 
     while(regs.time < OPL_MAX_RUNTIME){
         write_dest = 0;
         /* Decode source address */
-        src_a = program->op.src;
+        src_a = _gS(*program);
         if(src_a & 0x100){ // Program const
-            src = *((uint32_t *) program_start + (src_a & FILTER_LEN_MASK));
+            src = *(program_start + (src_a & FILTER_SIZE_MASK));
         }else if(src_a & 0x80){ // Unused
             src = 0;
         }else if(src_a & 0x40){ // Framebuffer[y][Reg[x]]
-            src = framebuffers[(src_a >> 4) & NUM_FRAMEBUFFERS_MASK][_REG(src_a) & NUM_PIXELS_MASK];
+            src = framebuffers[(src_a >> 4) & NUM_FRAMEBUFFERS_MASK][_REG(src_a) & NUM_PIXELS_MASK].raw;
         }else if((src_a & 0x30) == 0x30){ // Program[Reg[x]]
-            src = *((uint32_t *) program_start + (_REG(src_a) & FILTER_LEN_MASK));
+            src = *(program_start + (_REG(src_a) & FILTER_SIZE_MASK));
         }else if(src_a & 0x20){ // Reg[x]
             src = _REG(src_a);
         }else if(src_a & 0x10){ // Unused
@@ -40,25 +45,30 @@ void opalesce_exec(opcode_t* program){
         }else{ // Special
             src = regs.pc; //TODO
         }
+        printf("[0x%08x] source: 0x%08x 0x%08x\n", *program, src, src_a);
 
-        switch(program->op){
+        switch(*program & OPL_OPMASK){
             case OPL_OP_DEBUG:
-                printf("Debug: %i 0x%x", src, src);
+                printf("Debug: %i 0x%x\n", src, src);
+            break;
             case OPL_OP_HALT:
-            goto _halt;
+                regs.time = OPL_MAX_RUNTIME;
+            //goto _halt;
+            break;
             case OPL_OP_NOP:
             default:
+            break;
         }
 
         if(write_dest){
-            dest_a = program->op.dest;
+            dest_a = _gD(*program);
             if(dest_a & 0x100){ // Program const
-                *((uint32_t *) program_start + (src_a & FILTER_LEN_MASK)) = dest;
+                *(program_start + (src_a & FILTER_SIZE_MASK)) = dest;
             }else if(dest_a & 0x80){ // Unused
             }else if(dest_a & 0x40){ // Framebuffer[y][Reg[x]]
-                framebuffers[(src_a >> 4) & NUM_FRAMEBUFFERS_MASK][_REG(src_a) & NUM_PIXELS_MASK] = dest;
+                framebuffers[(src_a >> 4) & NUM_FRAMEBUFFERS_MASK][_REG(src_a) & NUM_PIXELS_MASK].raw = dest;
             }else if((dest_a & 0x30) == 0x30){ // Program[Reg[x]]
-                *((uint32_t *) program_start + (_REG(src_a) & FILTER_LEN_MASK)) = dest;
+                *(program_start + (_REG(src_a) & FILTER_SIZE_MASK)) = dest;
             }else if(dest_a & 0x20){ // Reg[x]
                 _REG(dest_a) = dest;
             }else if(dest_a & 0x10){ // Unused
@@ -70,5 +80,5 @@ void opalesce_exec(opcode_t* program){
         regs.pc++;
         regs.time++;
     }
-    _halt:
+    //_halt:
 }
