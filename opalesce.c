@@ -8,11 +8,11 @@ opcode_t filters[NUM_FILTERS][FILTER_SIZE];
 // # registers = 16
 // 8 7654 3210
 // 0 0000 xxxx - READONLY Special[`xxxx`]
-// 0 0001 **** - READONLY Unused[`xxxx`]
+// 0 0001 **** - READONLY Unused[`xxxx`] (Regs ___?)
 // 0 0010 rrrr - Regs[`xxxx`]
 // 0 0011 rrrr - Program[Regs[`rrrr`]]
 // 0 01ff rrrr - Framebuffer[`ff`][Regs[`rrrr`]]
-// 0 1*** **** - Unused
+// 0 1*** **** - Unused (Lit?)
 // 1 xxxx xxxx - Program[`xxxxxx`] (exact)
 //
 inline uint32_t opalesce_fetch_address(uint32_t addr, opcode_t* pgm, op_regs_t* regs){
@@ -61,9 +61,21 @@ void opalesce_exec(opcode_t* program){
         write_dest = 0;
         src_a = _gS(*program);
         src = opalesce_fetch_address(src_a, program_start, &regs);
-        printf("[0x%08x] source: 0x%08x @0x%08x\n", *program, src, src_a);
+        //printf("[0x%08x] source: 0x%08x @0x%08x\n", *program, src, src_a);
 
         switch(*program & OPL_OPMASK){
+            case OPL_OP_BEQ: // Branch if equal
+                dest = _FETCH_DEST;
+                value = _gL(*program); // Jump to location
+                // Value & 0x100 is BNEQ
+                if(value & 0x100 ? (src != dest) : (src == dest)){
+                    value &= 0xFF;
+                    if(value >= FILTER_SIZE){
+                        value = FILTER_SIZE - 1;
+                    }
+                    regs.pc = value - 1;
+                }
+            break;
             case OPL_OP_CPUT: // Put color
                 // TODO Put constant
                 color.raw = _FETCH_DEST;
@@ -170,17 +182,75 @@ void opalesce_exec(opcode_t* program){
                 }
                 write_dest = 1;
             break;
+            case OPL_OP_AND:
+                cons = _FETCH_CONS;
+                dest = cons & src;
+                write_dest = 1;
+            break;
+            case OPL_OP_OR:
+                cons = _FETCH_CONS;
+                dest = cons | src;
+                write_dest = 1;
+            break;
+            case OPL_OP_XOR:
+                cons = _FETCH_CONS;
+                dest = cons ^ src;
+                write_dest = 1;
+            break;
+            case OPL_OP_SHL:
+                cons = _FETCH_CONS;
+                dest = src << cons;
+                write_dest = 1;
+            break;
+            case OPL_OP_SHR:
+                cons = _FETCH_CONS;
+                dest = src >> cons;
+                write_dest = 1;
+            break;
             case OPL_OP_ADD:
                 cons = _FETCH_CONS;
                 dest = cons + src;
+                write_dest = 1;
+            break;
+            case OPL_OP_SUB:
+                cons = _FETCH_CONS;
+                dest = src - cons;
+                write_dest = 1;
+            break;
+            case OPL_OP_MUL:
+                cons = _FETCH_CONS;
+                dest = cons * src;
+                write_dest = 1;
+            break;
+            case OPL_OP_DIV:
+                cons = _FETCH_CONS;
+                dest = src / cons;
+                write_dest = 1;
+            break;
+            case OPL_OP_ADDS:
+                cons = _gL(*program);
+                if(cons & 0x100){ // SUBS
+                    dest = src - (cons & 0xFF);
+                }else{ // ADDS
+                    dest = src + (cons & 0xFF);
+                }
+                write_dest = 1;
+            break;
+            case OPL_OP_MULS:
+                cons = _gL(*program);
+                if(cons & 0x100){ // DIVS
+                    dest = src / (cons & 0xFF);
+                }else{ // MULS
+                    dest = src * (cons & 0xFF);
+                }
                 write_dest = 1;
             break;
             case OPL_OP_DEBUG:
                 printf("Debug: %i 0x%x\n", src, src);
             break;
             case OPL_OP_HALT:
-                regs.time = OPL_MAX_RUNTIME;
-            //goto _halt;
+                //regs.time = OPL_MAX_RUNTIME;
+                goto _halt;
             break;
             case OPL_OP_NOP:
             default:
@@ -189,7 +259,7 @@ void opalesce_exec(opcode_t* program){
 
         if(write_dest){
             dest_a = _gD(*program);
-            printf("[0x%08x] dest: 0x%08x @0x%08x\n", *program, dest, dest_a);
+            //printf("[0x%08x] dest: 0x%08x @0x%08x\n", *program, dest, dest_a);
             if(dest_a & 0x100){ // Program const
                 *(program_start + (src_a & FILTER_SIZE_MASK)) = dest;
             }else if(dest_a & 0x80){ // Unused
@@ -204,9 +274,13 @@ void opalesce_exec(opcode_t* program){
             }
         }
 
-        program++;
         regs.pc++;
+        if(regs.pc >= FILTER_SIZE){
+            goto _halt;
+        }
+        program = program_start + regs.pc;
         regs.time++;
     }
-    //_halt:
+    _halt:
+    return;
 }
