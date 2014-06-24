@@ -23,13 +23,15 @@ Opcodes
 
 32 bits -> ~ 4-6 for op, then 13 for source/dest
 
-- Arithmetic - 7
-    - ADD, ADDS, {ADDC, ADDCS}, {SUB, SUBC}, {SUBS, SUBCS}, {MUL, MULS}, {DIV, DIVS}
-- Bitwise - 8
-    - AND, OR, XOR, MVNT, {BSET, BSETS}, {BCLR, BCLRS}, {SHR, SHRS}, {SHL, SHLS} 
+- Arithmetic - 6
+    #- ADD, ADDS, {ADDC, ADDCS}, {SUB, SUBC}, {SUBS, SUBCS}, MUL, MULS, DIV
+    - ADD, SUB, MUL, DIV, {ADDS, SUBS}, {MULS, DIVS}
+- Bitwise - 12
+    #- AND, OR, XOR, MVNT, {BSET, BSETS}, {BCLR, BCLRS}, {SHR, SHRS}, {SHL, SHLS} 
+    - AND, OR, XOR, {MVNT}, BSET, BCLR, {BSETS, BCLRS}, SHR, SHL, {SHRS, SHLS}
 - Color - 2 (24)
-    - GET[RGBHSVXY], {PUT[RGBHSVXY], PUTS[RGBHSVXY]}
-        - 5-opcode, 3-subop, 9-tgt, 15-data = 32
+    - {GET[RGBHSVXY], PUT[RGBHSVXY]}, PUTS[RGBHSVXY]
+        - 5-opcode, 3-subop, 15-data, 9-tgt = 32
 - Compare - 2
     - {CMP, CMPS}, TST
 - Branching - 5
@@ -41,7 +43,7 @@ Opcodes
 - Other - 0
     - {NOP, HALT, END, SPEC, DEBUG} +(PUSH, POP, ASEND, ARECV)
 
-Total: 28
+Total: 31
 - Operations to add?
     - INCSZ/DECSZ - skip if zero
     - BTSS/BTSC - bit test skip if set/clear

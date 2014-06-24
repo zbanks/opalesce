@@ -60,10 +60,28 @@ extern tick_t clock;
 #define OPL_MAX_RUNTIME 1024
 
 #define OPL_OPOFFSET 27
-#define OPL_OPMASK   (0x1f << 27)
-#define OPL_OP_NOP   (0x00 << OPL_OPOFFSET)
-#define OPL_OP_HALT   (0x01 << OPL_OPOFFSET)
+#define OPL_OPMASK     (0x1f << 27)
+#define OPL_OP_NOP     (0x00 << OPL_OPOFFSET)
+#define OPL_OP_HALT    (0x01 << OPL_OPOFFSET)
 #define OPL_OP_DEBUG   (0x02 << OPL_OPOFFSET)
+#define OPL_OP_ADD     (0x03 << OPL_OPOFFSET)
+#define OPL_OP_MV      (0x04 << OPL_OPOFFSET)
+#define OPL_OP_LD      (OPL_OP_MV | (0x01 << 25))
+#define OPL_OP_LDL     (OPL_OP_MV | (0x02 << 25))
+#define OPL_OP_LDH     (OPL_OP_MV | (0x03 << 25))
+#define OPL_OP_CGET    (0x05 << OPL_OPOFFSET)
+#define OPL_OP_CPUT    (0x06 << OPL_OPOFFSET)
+#define OPL_OP_CPUTS   (OPL_OP_CPUT | (1 << 23))
+
+#define OPL_C_H        (0x00 << 24)
+#define OPL_C_S        (0x01 << 24)
+#define OPL_C_V        (0x02 << 24)
+#define OPL_C_HSV      (0x03 << 24)
+#define OPL_C_R        (0x04 << 24)
+#define OPL_C_G        (0x05 << 24)
+#define OPL_C_B        (0x06 << 24)
+#define OPL_C_RGB      (0x07 << 24)
+#define OPL_C_MASK     (OPL_C_RGB)
 
 // 9 bits of ref
 // # registers = 16
@@ -77,8 +95,8 @@ extern tick_t clock;
 // 1 xxxx xxxx - Program[`xxxxxx`] (exact)
 
 #define OPL_A_SP      (0x00)
-#define OPL_A_REG     (0x10)
-#define OPL_A_PREG    (0x20)
+#define OPL_A_REG     (0x20)
+#define OPL_A_PREG    (0x30)
 #define OPL_A_FREG    (0x40)
 #define OPL_A_F0REG   (0x40)
 #define OPL_A_F1REG   (0x50)
@@ -90,6 +108,7 @@ extern tick_t clock;
 #define _APREG(r) (OPL_A_PREG | r)
 #define _AFREG(f, r) (OPL_A_FREG | r | (f << 4))
 #define _APROG(l) (OPL_A_PROG | l)
+
 
 #define _D(x) (x << 0)
 #define _S(x) (x << 9)

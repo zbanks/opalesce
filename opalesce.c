@@ -14,40 +14,167 @@ opcode_t filters[NUM_FILTERS][FILTER_SIZE];
 // 0 01ff rrrr - Framebuffer[`ff`][Regs[`rrrr`]]
 // 0 1*** **** - Unused
 // 1 xxxx xxxx - Program[`xxxxxx`] (exact)
+//
+inline uint32_t opalesce_fetch_address(uint32_t addr, opcode_t* pgm, op_regs_t* regs){
+    uint32_t data;
+    #define _REGp(a) (regs->r[a & 0xf])
+    /* Decode source address */
+    if(addr & 0x100){ // Program const
+        data = *(pgm + (addr & FILTER_SIZE_MASK));
+    }else if(addr & 0x80){ // Unused
+        data = 0;
+    }else if(addr & 0x40){ // Framebuffer[y][Reg[x]]
+        data = framebuffers[(addr >> 4) & NUM_FRAMEBUFFERS_MASK][_REGp(addr) & NUM_PIXELS_MASK].raw;
+    }else if((addr & 0x30) == 0x30){ // Program[Reg[x]]
+        data = *(pgm + (_REGp(addr) & FILTER_SIZE_MASK));
+    }else if(addr & 0x20){ // Reg[x]
+        data = _REGp(addr);
+    }else if(addr & 0x10){ // Unused
+        data = 0;
+    }else{ // Special
+        data = regs->pc; //TODO
+    }
+    return data;
+}
 
 void opalesce_exec(opcode_t* program){
     op_regs_t regs;
-    #define _REG(a) (regs.r[a & 0xf])
     uint32_t src, cons, dest;
+    color_t color;
+    uint32_t value;
     uint32_t src_a, cons_a, dest_a;
     uint8_t write_dest;
+    int i;
+    #define _REG(a) (regs.r[a & 0xf])
 
     regs.pc = 0;
     regs.time = 0;
+    for(i = 0; i < 16; i++){
+        regs.r[i] = 0;
+    }
     opcode_t* program_start = program;
+#define _FETCH_DEST (opalesce_fetch_address(_gD(*program), program_start, &regs))
+#define _FETCH_SRC (opalesce_fetch_address(_gS(*program), program_start, &regs))
+#define _FETCH_CONS (opalesce_fetch_address(_gL(*program), program_start, &regs))
 
     while(regs.time < OPL_MAX_RUNTIME){
         write_dest = 0;
-        /* Decode source address */
         src_a = _gS(*program);
-        if(src_a & 0x100){ // Program const
-            src = *(program_start + (src_a & FILTER_SIZE_MASK));
-        }else if(src_a & 0x80){ // Unused
-            src = 0;
-        }else if(src_a & 0x40){ // Framebuffer[y][Reg[x]]
-            src = framebuffers[(src_a >> 4) & NUM_FRAMEBUFFERS_MASK][_REG(src_a) & NUM_PIXELS_MASK].raw;
-        }else if((src_a & 0x30) == 0x30){ // Program[Reg[x]]
-            src = *(program_start + (_REG(src_a) & FILTER_SIZE_MASK));
-        }else if(src_a & 0x20){ // Reg[x]
-            src = _REG(src_a);
-        }else if(src_a & 0x10){ // Unused
-            src = 0;
-        }else{ // Special
-            src = regs.pc; //TODO
-        }
-        printf("[0x%08x] source: 0x%08x 0x%08x\n", *program, src, src_a);
+        src = opalesce_fetch_address(src_a, program_start, &regs);
+        printf("[0x%08x] source: 0x%08x @0x%08x\n", *program, src, src_a);
 
         switch(*program & OPL_OPMASK){
+            case OPL_OP_CPUT: // Put color
+                // TODO Put constant
+                color.raw = _FETCH_DEST;
+                if(*program & (1 << 23)){ // Put constant
+                    value = src_a;
+                }else{
+                    value = src;
+                }
+                switch(*program & OPL_C_MASK){
+                    case OPL_C_H:
+                        color.st.hsv_h = value;
+                    break;
+                    case OPL_C_S:
+                        color.st.hsv_s = value;
+                    break;
+                    case OPL_C_V:
+                        color.st.hsv_v = value;
+                    break;
+                    case OPL_C_HSV:
+                        color.raw &= 0xFFFF0000;
+                        color.raw |= value & 0xFFFF;
+                    break;
+                    case OPL_C_R:
+                        color.st.rgb_r = value;
+                    break;
+                    case OPL_C_G:
+                        color.st.rgb_g = value;
+                    break;
+                    case OPL_C_B:
+                        color.st.rgb_b = value;
+                    break;
+                    case OPL_C_RGB:
+                    default:
+                        color.raw &= 0xFFFF;
+                        color.raw |= value << 16;
+                    break;
+                }
+                if(*program & OPL_C_R){ // RGB have 0x04 bit set
+                    color.st.hsv_valid = 0;
+                    color.st.rgb_valid = 1;
+                }else{
+                    color.st.hsv_valid = 1; //XXX &= 1?
+                    color.st.rgb_valid = 0;
+                }
+                dest = color.raw;
+                write_dest = 1;
+            break;
+            case OPL_OP_CGET: // Get color
+                color.raw = src;
+                if(*program & OPL_C_HSV){
+                    ASSERT_HSV(color);
+                }else{
+                    ASSERT_RGB(color);
+                }
+                switch(*program & OPL_C_MASK){
+                    case OPL_C_H:
+                        dest = color.st.hsv_h;
+                    break;
+                    case OPL_C_S:
+                        dest = color.st.hsv_s;
+                    break;
+                    case OPL_C_V:
+                        dest = color.st.hsv_v;
+                    break;
+                    case OPL_C_HSV:
+                        dest = color.raw >> 16; //TODO
+                    break;
+                    case OPL_C_R:
+                        dest = color.st.rgb_r;
+                    break;
+                    case OPL_C_G:
+                        dest = color.st.rgb_g;
+                    break;
+                    case OPL_C_B:
+                        dest = color.st.rgb_b;
+                    break;
+                    case OPL_C_RGB:
+                    default:
+                        dest = color.raw & 0xFFFF; // TODO
+                    break;
+                }
+                write_dest = 1;
+            break;
+            case OPL_OP_MV: // 00100 XYvvvvvvv sssssssss dddddddd
+                // XY = 00: Move s -> d
+                // XY = 01: Move lit vs -> d
+                // XY = 10: Move lit vs -> lower half of d
+                // XY = 11: Move lit vs -> upper half of d
+                if(*program & (1 << 26)){ // Load half constant
+                    dest = _FETCH_DEST;
+                    if(*program & (1 << 25)){ // Load high
+                        dest &= 0xFFFF;
+                        dest |= (*program << 7) & 0xFFFF0000;
+                    }else{ // Load Low
+                        dest &= 0xFFFF0000;
+                        dest |= (*program >> 9) & 0xFFFF;
+                    }
+                }else{ // Move
+                    if(*program & (1 << 25)){ // Load Constant
+                        dest = (*program >> 9) & 0xFFFF;
+                    }else{
+                        dest = src;
+                    }
+                }
+                write_dest = 1;
+            break;
+            case OPL_OP_ADD:
+                cons = _FETCH_CONS;
+                dest = cons + src;
+                write_dest = 1;
+            break;
             case OPL_OP_DEBUG:
                 printf("Debug: %i 0x%x\n", src, src);
             break;
@@ -62,6 +189,7 @@ void opalesce_exec(opcode_t* program){
 
         if(write_dest){
             dest_a = _gD(*program);
+            printf("[0x%08x] dest: 0x%08x @0x%08x\n", *program, dest, dest_a);
             if(dest_a & 0x100){ // Program const
                 *(program_start + (src_a & FILTER_SIZE_MASK)) = dest;
             }else if(dest_a & 0x80){ // Unused
