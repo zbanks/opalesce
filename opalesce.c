@@ -32,12 +32,12 @@ inline uint32_t opalesce_fetch_address(uint32_t addr, opcode_t* pgm, op_regs_t* 
     }else if(addr & 0x10){ // Unused
         data = 0;
     }else{ // Special
-        data = regs->pc; //TODO
+        data = *(&(regs->pc) + (addr & 0x7)); //TODO
     }
     return data;
 }
 
-void opalesce_exec(opcode_t* program){
+void opalesce_exec(opcode_t* program, uint32_t beat, uint32_t tick){
     op_regs_t regs;
     uint32_t src, cons, dest;
     color_t color;
@@ -49,6 +49,10 @@ void opalesce_exec(opcode_t* program){
 
     regs.pc = 0;
     regs.time = 0;
+    regs.beat = beat;
+    regs.tick = tick;
+    regs.fblen = NUM_PIXELS;
+    regs.cycles = 20;
     for(i = 0; i < 16; i++){
         regs.r[i] = 0;
     }
@@ -83,6 +87,11 @@ void opalesce_exec(opcode_t* program){
                     value = src_a;
                 }else{
                     value = src;
+                }
+                if(*program & OPL_C_R){
+                    ASSERT_RGB(color);
+                }else{
+                    ASSERT_HSV(color);
                 }
                 switch(*program & OPL_C_MASK){
                     case OPL_C_H:
@@ -125,10 +134,10 @@ void opalesce_exec(opcode_t* program){
             break;
             case OPL_OP_CGET: // Get color
                 color.raw = src;
-                if(*program & OPL_C_HSV){
-                    ASSERT_HSV(color);
-                }else{
+                if(*program & OPL_C_R){
                     ASSERT_RGB(color);
+                }else{
+                    ASSERT_HSV(color);
                 }
                 switch(*program & OPL_C_MASK){
                     case OPL_C_H:
@@ -181,6 +190,25 @@ void opalesce_exec(opcode_t* program){
                     }
                 }
                 write_dest = 1;
+            break;
+            case OPL_OP_BSET:
+                cons = _FETCH_CONS;
+                dest |= (1 << cons);
+                write_dest = 1;
+            break;
+            case OPL_OP_BCLR:
+                cons = _FETCH_CONS;
+                dest = src & ~cons;
+                write_dest = 1;
+            break;
+            case OPL_OP_BIT:
+                switch(_gL(*program)){
+                    case 0x02: // MVNT
+                        dest = ~src;
+                    break;
+                    default:
+                    break;
+                }
             break;
             case OPL_OP_AND:
                 cons = _FETCH_CONS;
@@ -246,7 +274,7 @@ void opalesce_exec(opcode_t* program){
                 write_dest = 1;
             break;
             case OPL_OP_DEBUG:
-                printf("Debug: %i 0x%x\n", src, src);
+                fprintf(stderr, "Debug: %i 0x%x\n", src, src);
             break;
             case OPL_OP_HALT:
                 //regs.time = OPL_MAX_RUNTIME;
@@ -261,12 +289,12 @@ void opalesce_exec(opcode_t* program){
             dest_a = _gD(*program);
             //printf("[0x%08x] dest: 0x%08x @0x%08x\n", *program, dest, dest_a);
             if(dest_a & 0x100){ // Program const
-                *(program_start + (src_a & FILTER_SIZE_MASK)) = dest;
+                *(program_start + (dest_a  & FILTER_SIZE_MASK)) = dest;
             }else if(dest_a & 0x80){ // Unused
             }else if(dest_a & 0x40){ // Framebuffer[y][Reg[x]]
-                framebuffers[(src_a >> 4) & NUM_FRAMEBUFFERS_MASK][_REG(src_a) & NUM_PIXELS_MASK].raw = dest;
+                framebuffers[(dest_a >> 4) & NUM_FRAMEBUFFERS_MASK][_REG(dest_a) & NUM_PIXELS_MASK].raw = dest;
             }else if((dest_a & 0x30) == 0x30){ // Program[Reg[x]]
-                *(program_start + (_REG(src_a) & FILTER_SIZE_MASK)) = dest;
+                *(program_start + (_REG(dest_a) & FILTER_SIZE_MASK)) = dest;
             }else if(dest_a & 0x20){ // Reg[x]
                 _REG(dest_a) = dest;
             }else if(dest_a & 0x10){ // Unused
@@ -282,5 +310,14 @@ void opalesce_exec(opcode_t* program){
         regs.time++;
     }
     _halt:
+    fprintf(stderr, "Run time: %d\n", regs.time);
     return;
+}
+
+void oplaesce_extract_rgb(uint16_t *pixel_data){
+    int i;
+    for(i = 0; i < NUM_PIXELS; i++){
+        ASSERT_RGB(framebuffers[0][i]);
+        *(pixel_data + i) = framebuffers[0][i].raw & 0xFFFF;
+    }
 }

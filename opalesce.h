@@ -57,7 +57,7 @@ extern tick_t clock;
 */
 
 #define OPL_NUM_REGS 16
-#define OPL_MAX_RUNTIME 1024
+#define OPL_MAX_RUNTIME (1 << 12)
 
 #define OPL_OPOFFSET 27
 #define OPL_OPMASK     (0x1f << 27)
@@ -86,6 +86,10 @@ extern tick_t clock;
 #define OPL_OP_XOR     (0x18 << OPL_OPOFFSET)
 #define OPL_OP_SHL     (0x19 << OPL_OPOFFSET)
 #define OPL_OP_SHR     (0x1A << OPL_OPOFFSET)
+#define OPL_OP_BIT     (0x1B << OPL_OPOFFSET)
+#define OPL_OP_BSET    (0x1C << OPL_OPOFFSET)
+#define OPL_OP_BCLR    (0x1D << OPL_OPOFFSET)
+#define OPL_OP_MVNT    (OPL_OP_BIT | (0x02 << 18))
 
 #define OPL_C_H        (0x00 << 24)
 #define OPL_C_S        (0x01 << 24)
@@ -122,6 +126,7 @@ extern tick_t clock;
 #define _APREG(r) (OPL_A_PREG | r)
 #define _AFREG(f, r) (OPL_A_FREG | r | (f << 4))
 #define _APROG(l) (OPL_A_PROG | l)
+#define _ASPEC(s) (OPL_A_SP | s)
 
 
 #define _D(x) (x << 0)
@@ -144,9 +149,21 @@ typedef struct{
     uint32_t tick;
     uint32_t loopc;
     uint32_t fblen;
+    uint32_t cycles;
+    uint32_t _unused;
 } op_regs_t;
+
+#define OPL_S_PC       (0)
+#define OPL_S_TIME     (1)
+#define OPL_S_BEAT     (2)
+#define OPL_S_TICK     (3)
+#define OPL_S_LOOPC    (4)
+#define OPL_S_FBLEN    (5)
+#define OPL_S_CYCLES   (6)
 
 extern color_t framebuffers[NUM_FRAMEBUFFERS][NUM_PIXELS];
 extern opcode_t filters[NUM_FILTERS][FILTER_SIZE];
+
+void oplaesce_extract_rgb(uint16_t *);
 
 #endif

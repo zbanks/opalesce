@@ -23,23 +23,25 @@ Opcodes
 
 32 bits -> ~ 4-6 for op, then 13 for source/dest
 
+ # - only has 2 operands
+
 - Arithmetic - 6 [Done]
     - ADD, SUB, MUL, DIV, {ADDS, SUBS}, {MULS, DIVS}
 - Bitwise - 12 [AND, OR, XOR, SHR, SHL Done]
-    - AND, OR, XOR, {MVNT}, BSET, BCLR, {BSETS, BCLRS}, SHR, SHL, {SHRS, SHLS}
+    - AND, OR, XOR, {#MVNT}, BSET, BCLR, {#BSETS, #BCLRS}, SHR, SHL, {SHRS, SHLS}
 - Color - 2 (24) [Done]
     - {GET[RGBHSVXY], PUT[RGBHSVXY]}, PUTS[RGBHSVXY]
         - 5-opcode, 3-subop, 15-data, 9-tgt = 32
 - Compare - 2
-    - {CMP, CMPS}, TST
+    - {CMP, CMPS}, #TST
 - Branching - 5 [BEQ, BNEQ Done]
     - BEQ, BNEQ, JMP, CALL, RET
 - Memory - 4
-    - MV, {LD, LDC, LDCH}, {PUSH, POP}
+    - #MV, {#LD, #LDC, #LDCH}, {#PUSH, #POP}
 - IO - 0
-    - {ASEND, ARECV}
+    - {#ASEND, #ARECV}
 - Other - 0 [NOP, HALT Done]
-    - {NOP, HALT, END, SPEC, DEBUG} +(PUSH, POP, ASEND, ARECV)
+    - {#NOP, #HALT, #END, #SPEC, #DEBUG}
 
 Total: 31
 - Operations to add?
