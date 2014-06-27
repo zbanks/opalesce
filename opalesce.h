@@ -61,9 +61,16 @@ extern tick_t clock;
 
 #define OPL_OPOFFSET 27
 #define OPL_OPMASK     (0x1f << 27)
-#define OPL_OP_NOP     (0x00 << OPL_OPOFFSET)
-#define OPL_OP_HALT    (0x01 << OPL_OPOFFSET)
-#define OPL_OP_DEBUG   (0x02 << OPL_OPOFFSET)
+#define OPL_OP_TWOI    (0x00 << OPL_OPOFFSET)
+#define OPL_OP_NOP     (OPL_OP_TWOI | (0x00 << 18))
+#define OPL_OP_MVNT    (OPL_OP_TWOI | (0x01 << 18))
+#define OPL_OP_CALL    (OPL_OP_TWOI | (0x02 << 18))
+#define OPL_OP_RET     (OPL_OP_TWOI | (0x03 << 18))
+#define OPL_OP_HALT    (OPL_OP_TWOI | (0x04 << 18))
+#define OPL_OP_DEBUG   (OPL_OP_TWOI | (0x05 << 18))
+// 0x01
+// 0x02
+// 0x03
 #define OPL_OP_MV      (0x04 << OPL_OPOFFSET)
 #define OPL_OP_LD      (OPL_OP_MV | (0x01 << 25))
 #define OPL_OP_LDL     (OPL_OP_MV | (0x02 << 25))
@@ -73,6 +80,14 @@ extern tick_t clock;
 #define OPL_OP_CPUTS   (OPL_OP_CPUT | (1 << 23))
 #define OPL_OP_BEQ     (0x07 << OPL_OPOFFSET)
 #define OPL_OP_BNEQ    (OPL_OP_BEQ | (0x01 << 26))
+// 0x08
+// 0x09
+// 0x0A
+// 0x0B
+// 0x0C
+// 0x0D
+// 0x0E
+// 0x0F
 #define OPL_OP_ADD     (0x10 << OPL_OPOFFSET)
 #define OPL_OP_SUB     (0x11 << OPL_OPOFFSET)
 #define OPL_OP_MUL     (0x12 << OPL_OPOFFSET)
@@ -86,10 +101,11 @@ extern tick_t clock;
 #define OPL_OP_XOR     (0x18 << OPL_OPOFFSET)
 #define OPL_OP_SHL     (0x19 << OPL_OPOFFSET)
 #define OPL_OP_SHR     (0x1A << OPL_OPOFFSET)
-#define OPL_OP_BIT     (0x1B << OPL_OPOFFSET)
+// 0x1B
 #define OPL_OP_BSET    (0x1C << OPL_OPOFFSET)
 #define OPL_OP_BCLR    (0x1D << OPL_OPOFFSET)
-#define OPL_OP_MVNT    (OPL_OP_BIT | (0x02 << 18))
+#define OPL_OP_CMP     (0x1E << OPL_OPOFFSET)
+#define OPL_OP_CMPS    (OPL_OP_CMP | (0x01 << 26))
 
 #define OPL_C_H        (0x00 << 24)
 #define OPL_C_S        (0x01 << 24)
@@ -143,13 +159,13 @@ typedef uint32_t opcode_t;
 
 typedef struct{
     uint32_t r[OPL_NUM_REGS];
-    uint32_t pc;
-    uint32_t time;
-    uint32_t beat;
-    uint32_t tick;
-    uint32_t loopc;
-    uint32_t fblen;
-    uint32_t cycles;
+    uint32_t pc;      // Program Counter
+    uint32_t time;    // "Cycles" the program has been running
+    uint32_t beat;    // Beat (timing)
+    uint32_t tick;    // Tick (timing)
+    uint32_t sp;      // Stack Pointer
+    uint32_t fblen;   // Length of each framebuffer (constant)
+    uint32_t cycles;  // CPU cycles used (estimate, debugging)
     uint32_t _unused;
 } op_regs_t;
 
@@ -157,7 +173,7 @@ typedef struct{
 #define OPL_S_TIME     (1)
 #define OPL_S_BEAT     (2)
 #define OPL_S_TICK     (3)
-#define OPL_S_LOOPC    (4)
+#define OPL_S_SP       (4)
 #define OPL_S_FBLEN    (5)
 #define OPL_S_CYCLES   (6)
 

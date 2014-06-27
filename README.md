@@ -25,25 +25,34 @@ Opcodes
 
  # - only has 2 operands
 
+ Need to still write:
+    - BSETS, BCLRS
+    - TST
+    - CALL, RET
+    - PUSH, POP
+    - ASEND, ARECV
+    - END, SPEC
+
 - Arithmetic - 6 [Done]
     - ADD, SUB, MUL, DIV, {ADDS, SUBS}, {MULS, DIVS}
-- Bitwise - 12 [AND, OR, XOR, SHR, SHL Done]
-    - AND, OR, XOR, {#MVNT}, BSET, BCLR, {#BSETS, #BCLRS}, SHR, SHL, {SHRS, SHLS}
+- Bitwise - 12 [AND, OR, XOR, SHR, SHL, MVNT, BSET, BCLR Done]
+    - AND, OR, XOR, {#MVNT}, BSET, BCLR, {BSETS, BCLRS}, SHR, SHL, {SHRS, SHLS}
 - Color - 2 (24) [Done]
     - {GET[RGBHSVXY], PUT[RGBHSVXY]}, PUTS[RGBHSVXY]
         - 5-opcode, 3-subop, 15-data, 9-tgt = 32
-- Compare - 2
-    - {CMP, CMPS}, #TST
+- Compare - 2 [CMP, CMPS -  Done]
+    - {CMP, CMPS}, ~TST
 - Branching - 5 [BEQ, BNEQ Done]
-    - BEQ, BNEQ, JMP, CALL, RET
-- Memory - 4
-    - #MV, {#LD, #LDC, #LDCH}, {#PUSH, #POP}
+    - BEQ, BNEQ, CALL, RET
+- Memory - 4 [MV, LD, LDC, LDCH Done]
+    - {MV, LD, LDC, LDCH}, {#PUSH, #POP}
 - IO - 0
     - {#ASEND, #ARECV}
 - Other - 0 [NOP, HALT Done]
     - {#NOP, #HALT, #END, #SPEC, #DEBUG}
 
-Total: 31
+Total: 32?
+
 - Operations to add?
     - INCSZ/DECSZ - skip if zero
     - BTSS/BTSC - bit test skip if set/clear

@@ -52,6 +52,7 @@ void opalesce_exec(opcode_t* program, uint32_t beat, uint32_t tick){
     regs.beat = beat;
     regs.tick = tick;
     regs.fblen = NUM_PIXELS;
+    regs.sp = FILTER_SIZE - 1;
     regs.cycles = 20;
     for(i = 0; i < 16; i++){
         regs.r[i] = 0;
@@ -61,7 +62,7 @@ void opalesce_exec(opcode_t* program, uint32_t beat, uint32_t tick){
 #define _FETCH_SRC (opalesce_fetch_address(_gS(*program), program_start, &regs))
 #define _FETCH_CONS (opalesce_fetch_address(_gL(*program), program_start, &regs))
 
-    while(regs.time < OPL_MAX_RUNTIME){
+    while((regs.time < OPL_MAX_RUNTIME) && (regs.pc <= regs.sp)){
         write_dest = 0;
         src_a = _gS(*program);
         src = opalesce_fetch_address(src_a, program_start, &regs);
@@ -201,14 +202,51 @@ void opalesce_exec(opcode_t* program, uint32_t beat, uint32_t tick){
                 dest = src & ~cons;
                 write_dest = 1;
             break;
-            case OPL_OP_BIT:
+            case OPL_OP_TWOI:
                 switch(_gL(*program)){
-                    case 0x02: // MVNT
+                    case 0x00: // NOP
+                    break;
+                    case _gL(OPL_OP_MVNT): // MVNT
                         dest = ~src;
+                    break;
+                    case _gL(OPL_OP_CALL): // CALL
+                        dest = *(program+regs.sp) = regs.pc;
+                        regs.sp--;
+                        if(regs.sp == 0){
+                            goto _halt;
+                        }
+                        regs.pc = src;
+                        //write_dest = 1
+                    break;
+                    case _gL(OPL_OP_RET): // RET
+                        regs.sp++;
+                        dest = regs.pc;
+                        regs.pc = *(program+regs.sp);
+                        if(regs.sp >= FILTER_SIZE){
+                            goto _halt;
+                        }
+                        //write_dest = 1
+                    break;
+                    case _gL(OPL_OP_DEBUG):
+                        fprintf(stderr, "Debug: %i 0x%x\n", src, src);
+                    break;
+                    case _gL(OPL_OP_HALT):
+                        //regs.time = OPL_MAX_RUNTIME;
+                        goto _halt;
                     break;
                     default:
                     break;
                 }
+            break;
+            case OPL_OP_CMP:
+                cons = _gL(*program);
+                if(cons & 0x100){ // CMPS
+                    cons = cons & 0xFF;
+                }else{
+                    cons = _FETCH_CONS;
+                }
+                dest = cons > src;
+                write_dest = 1;
             break;
             case OPL_OP_AND:
                 cons = _FETCH_CONS;
@@ -273,14 +311,6 @@ void opalesce_exec(opcode_t* program, uint32_t beat, uint32_t tick){
                 }
                 write_dest = 1;
             break;
-            case OPL_OP_DEBUG:
-                fprintf(stderr, "Debug: %i 0x%x\n", src, src);
-            break;
-            case OPL_OP_HALT:
-                //regs.time = OPL_MAX_RUNTIME;
-                goto _halt;
-            break;
-            case OPL_OP_NOP:
             default:
             break;
         }
