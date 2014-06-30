@@ -42,7 +42,9 @@ void opalesce_exec(opcode_t* program, uint32_t beat, uint32_t tick){
     uint32_t src, cons, dest;
     color_t color;
     uint32_t value;
+    uint32_t *ptr;
     uint32_t src_a, cons_a, dest_a;
+    uint32_t *program_status;
     uint8_t write_dest;
     int i;
     #define _REG(a) (regs.r[a & 0xf])
@@ -57,13 +59,19 @@ void opalesce_exec(opcode_t* program, uint32_t beat, uint32_t tick){
     for(i = 0; i < 16; i++){
         regs.r[i] = 0;
     }
-    opcode_t* program_start = program;
+    opcode_t* program_start = program + 1;
 #define _FETCH_DEST (opalesce_fetch_address(_gD(*program), program_start, &regs))
 #define _FETCH_SRC (opalesce_fetch_address(_gS(*program), program_start, &regs))
 #define _FETCH_CONS (opalesce_fetch_address(_gL(*program), program_start, &regs))
 
+    program_status = program;
+    if(!(*program_status & OPL_PGM_RUN)){
+        return;
+    }
+
     while((regs.time < OPL_MAX_RUNTIME) && (regs.pc <= regs.sp)){
         write_dest = 0;
+        program = program_start + regs.pc;
         src_a = _gS(*program);
         src = opalesce_fetch_address(src_a, program_start, &regs);
         //printf("[0x%08x] source: 0x%08x @0x%08x\n", *program, src, src_a);
@@ -210,7 +218,7 @@ void opalesce_exec(opcode_t* program, uint32_t beat, uint32_t tick){
                         dest = ~src;
                     break;
                     case _gL(OPL_OP_CALL): // CALL
-                        dest = *(program+regs.sp) = regs.pc;
+                        dest = *(program_start+regs.sp) = regs.pc;
                         regs.sp--;
                         if(regs.sp == 0){
                             goto _halt;
@@ -221,7 +229,7 @@ void opalesce_exec(opcode_t* program, uint32_t beat, uint32_t tick){
                     case _gL(OPL_OP_RET): // RET
                         regs.sp++;
                         dest = regs.pc;
-                        regs.pc = *(program+regs.sp);
+                        regs.pc = *(program_start+regs.sp);
                         if(regs.sp >= FILTER_SIZE){
                             goto _halt;
                         }
@@ -233,6 +241,64 @@ void opalesce_exec(opcode_t* program, uint32_t beat, uint32_t tick){
                     case _gL(OPL_OP_HALT):
                         //regs.time = OPL_MAX_RUNTIME;
                         goto _halt;
+                    break;
+                    case _gL(OPL_OP_PUSH):
+                        value = *program & 0xFFFF; // 16 regs
+                        ptr = regs.r;
+                        while(value && regs.sp){
+                            regs.sp--;
+                            if(value & 1){
+                                *(program_start+regs.sp) = *ptr;
+                            }
+                            ptr++;
+                            value >>= 1;
+                        }
+                        if(regs.sp == 0){
+                            goto _halt;
+                        }
+                    break;
+                    case _gL(OPL_OP_POP):
+                        value = *program & 0xFFFF; // 16 regs
+                        ptr = regs.r + 15;
+                        while(value && regs.sp){
+                            if(regs.sp >= FILTER_SIZE){
+                                goto _halt;
+                            }
+                            regs.sp++;
+                            ptr--;
+                            value = (value << 1) & 0xFFFF; // opt with uint16_t?
+                        }
+                    break;
+                    case _gL(OPL_OP_INCSQ):
+                        dest = _FETCH_DEST;
+                        dest++;
+                        if(dest == src){
+                            regs.pc++;
+                        }
+                        write_dest = 1;
+                    break;
+                    case _gL(OPL_OP_DECSQ):
+                        dest = _FETCH_DEST;
+                        dest--;
+                        if(dest == src){
+                            regs.pc++;
+                        }
+                        write_dest = 1;
+                    break;
+                    case _gL(OPL_OP_BTSS):
+                        dest = _FETCH_DEST;
+                        if(src & (1 << dest)){
+                            regs.pc++;
+                        }
+                    break;
+                    case _gL(OPL_OP_BTSC):
+                        dest = _FETCH_DEST;
+                        if(!(src & (1 << dest))){
+                            regs.pc++;
+                        }
+                    break;
+                    case _gL(OPL_OP_END):
+                        *program_status &= ~OPL_PGM_RUN;
                     break;
                     default:
                     break;
@@ -336,7 +402,6 @@ void opalesce_exec(opcode_t* program, uint32_t beat, uint32_t tick){
         if(regs.pc >= FILTER_SIZE){
             goto _halt;
         }
-        program = program_start + regs.pc;
         regs.time++;
     }
     _halt:

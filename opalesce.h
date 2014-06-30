@@ -68,6 +68,13 @@ extern tick_t clock;
 #define OPL_OP_RET     (OPL_OP_TWOI | (0x03 << 18))
 #define OPL_OP_HALT    (OPL_OP_TWOI | (0x04 << 18))
 #define OPL_OP_DEBUG   (OPL_OP_TWOI | (0x05 << 18))
+#define OPL_OP_POP     (OPL_OP_TWOI | (0x06 << 18))
+#define OPL_OP_PUSH    (OPL_OP_TWOI | (0x07 << 18))
+#define OPL_OP_INCSQ   (OPL_OP_TWOI | (0x08 << 18))
+#define OPL_OP_DECSQ   (OPL_OP_TWOI | (0x09 << 18))
+#define OPL_OP_BTSS    (OPL_OP_TWOI | (0x0A << 18))
+#define OPL_OP_BTSC    (OPL_OP_TWOI | (0x0B << 18))
+#define OPL_OP_END     (OPL_OP_TWOI | (0xFF << 18))
 // 0x01
 // 0x02
 // 0x03
@@ -143,6 +150,7 @@ extern tick_t clock;
 #define _AFREG(f, r) (OPL_A_FREG | r | (f << 4))
 #define _APROG(l) (OPL_A_PROG | l)
 #define _ASPEC(s) (OPL_A_SP | s)
+#define _ZERO     (0x10) // Currently unused
 
 
 #define _D(x) (x << 0)
@@ -176,6 +184,8 @@ typedef struct{
 #define OPL_S_SP       (4)
 #define OPL_S_FBLEN    (5)
 #define OPL_S_CYCLES   (6)
+
+#define OPL_PGM_RUN    (1 << 0)
 
 extern color_t framebuffers[NUM_FRAMEBUFFERS][NUM_PIXELS];
 extern opcode_t filters[NUM_FILTERS][FILTER_SIZE];

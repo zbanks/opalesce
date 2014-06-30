@@ -28,8 +28,6 @@ Opcodes
  Need to still write:
     - BSETS, BCLRS
     - TST
-    - CALL, RET
-    - PUSH, POP
     - ASEND, ARECV
     - END, SPEC
 
