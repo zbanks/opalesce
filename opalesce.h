@@ -74,6 +74,8 @@ extern tick_t clock;
 #define OPL_OP_DECSQ   (OPL_OP_TWOI | (0x09 << 18))
 #define OPL_OP_BTSS    (OPL_OP_TWOI | (0x0A << 18))
 #define OPL_OP_BTSC    (OPL_OP_TWOI | (0x0B << 18))
+#define OPL_OP_JMP     (OPL_OP_TWOI | (0x0C << 18))
+#define OPL_OP_JMPO    (OPL_OP_TWOI | (0x0D << 18))
 #define OPL_OP_END     (OPL_OP_TWOI | (0xFF << 18))
 // 0x01
 // 0x02

@@ -55,9 +55,8 @@ Total: 32?
     - INCSZ/DECSZ - skip if zero
     - BTSS/BTSC - bit test skip if set/clear
     - MODULO
+    - Compare/Branch via status register
 
-
-Callstack size: 4?
 
 ADD r1, r2, r3 ; r1 <- r2 + r3
 ADDC r1, r2, C ; r1 <- r2 + C

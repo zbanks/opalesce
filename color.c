@@ -3,6 +3,7 @@
 #define MIN(x, y) (x < y ? x : y)
 #define MAX(x, y) (x < y ? x : y)
 
+/* ~65 instructions -O3 */
 void hsv_from_rgb(color_t* c){
     //TODO: Double check this
     int16_t h;
@@ -42,6 +43,7 @@ void hsv_from_rgb(color_t* c){
     c->st.hsv_valid = 1;
 }
 
+/* ~130 instructions -O3 */
 void rgb_from_hsv(color_t* c){
     // Convert HSV to RGB.  Hue from 0-127, sat 4 bit, val 3 bit
     // TODO: Optimize for the values we actually have

@@ -15,6 +15,8 @@ opcode_t filters[NUM_FILTERS][FILTER_SIZE];
 // 0 1*** **** - Unused (Lit?)
 // 1 xxxx xxxx - Program[`xxxxxx`] (exact)
 //
+
+/* 6-17 instructions on -O3 */
 inline uint32_t opalesce_fetch_address(uint32_t addr, opcode_t* pgm, op_regs_t* regs){
     uint32_t data;
     #define _REGp(a) (regs->r[a & 0xf])
@@ -296,6 +298,12 @@ void opalesce_exec(opcode_t* program, uint32_t beat, uint32_t tick){
                         if(!(src & (1 << dest))){
                             regs.pc++;
                         }
+                    break;
+                    case _gL(OPL_OP_JMP):
+                        regs.pc = src;
+                    break;
+                    case _gL(OPL_OP_JMPO):
+                        regs.pc += src;
                     break;
                     case _gL(OPL_OP_END):
                         *program_status &= ~OPL_PGM_RUN;

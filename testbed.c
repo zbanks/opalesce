@@ -86,6 +86,7 @@ int main(){
     filters[j][i++] = OPL_OP_SUBS  | _L(1)                  | _D(_AREG(4)) | _S(_ZERO);
     */
 
+
     filters[j][i++] = OPL_OP_ADD   | _S(_AREG(2))           | _D(_AREG(0))   | _L(_AREG(3));
     filters[j][i++] = OPL_OP_DEBUG | _S(_AREG(0));
     filters[j][i++] = OPL_OP_CPUTS | OPL_C_R |  _S(0x00)    | _D(_AFREG(3,0));
